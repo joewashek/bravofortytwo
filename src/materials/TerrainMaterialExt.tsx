@@ -1,4 +1,4 @@
-import { BabylonNode, HostRegistrationStore, PropertyUpdate, Scene, PropsHandler,FiberMaterialPropsHandler,FiberPushMaterialPropsCtor,FiberPushMaterialPropsHandler} from "react-babylonjs";
+import { HostRegistrationStore, PropertyUpdate, PropsHandler,FiberMaterialPropsHandler,FiberPushMaterialPropsHandler} from "react-babylonjs";
 import { TerrainMaterial } from "@babylonjs/materials";
 import { Color3, Texture } from "@babylonjs/core";
 
@@ -44,16 +44,6 @@ class FiberTerrainMaterial{
     this.propsHandlers.push(propHandler)
   }
 }
-
-// declare global {
-//   namespace JSX {
-//     interface IntrinsicElements {
-//       terrainMaterial: FiberTerrainMaterialProps &
-//       FiberPushMaterialPropsCtor &
-//         BabylonNode<TerrainMaterial>
-//     }
-//   }
-// }
 
 HostRegistrationStore.Register({
   hostElementName: 'terrainMaterial',

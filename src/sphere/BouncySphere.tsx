@@ -1,3 +1,4 @@
+import { PhysicsAggregate, PhysicsShapeType } from '@babylonjs/core';
 import { FresnelParameters } from '@babylonjs/core/Materials/fresnelParameters';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
@@ -17,30 +18,32 @@ type BouncySphereProps = {
 
 const BouncySphere: FC<BouncySphereProps> = ({ fontsReady, position, name, color }) => {
 
-  let sphereRef = useRef<Nullable<Mesh>>(null);
+  let sphereAggRef = useRef<Nullable<PhysicsAggregate>>(null);
   const adtRef = useRef<AdvancedDynamicTexture | null>(null);
 
   useEffect(() => {
+   // console.log('useeffect for sphre')
     if (adtRef.current) {
-      console.log('marking dirty');
+      //console.log('marking dirty');
       adtRef.current!.markAsDirty();
     } else {
-      console.log('no ref');
+      //console.log('no ref');
     }
   }, [fontsReady, adtRef])
 
   const onButtonClicked = () => {
-    if (sphereRef.current) {
-      sphereRef.current.physicsImpostor!.applyImpulse(
+    if (sphereAggRef.current) {
+      sphereAggRef.current.body!.applyImpulse(
         Vector3.Up().scale(10),
-        sphereRef.current.getAbsolutePosition()
+        sphereAggRef.current.transformNode.getAbsolutePosition()
       );
+      
     }
   };
 
   return (
-    <sphere ref={sphereRef} name={`${name}-sphere`} diameter={2} segments={16} position={position}>
-      <physicsImpostor type={PhysicsImpostor.SphereImpostor} _options={{ mass: 1, restitution: 0.9 }} />
+    <sphere name={`${name}-sphere`} diameter={2} segments={16} position={position}>
+      <physicsAggregate ref={sphereAggRef} type={PhysicsShapeType.SPHERE} _options={{ mass: 1, restitution: 0.9 }} />
       <standardMaterial name={`${name}-material`} specularPower={16}
         diffuseColor={Color3.Black()}
         emissiveColor={color}
