@@ -1,4 +1,4 @@
-import { ArcRotateCamera,HavokPlugin, Color3, Color4, CubeTexture, DirectionalLight, Engine,FreeCamera,HemisphericLight,Mesh,MeshBuilder,Observable,Scene, SceneLoader, StandardMaterial, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, PhysicsMotionType, PhysicsViewer } from "@babylonjs/core";
+import { ArcRotateCamera,HavokPlugin, Color3, Color4, CubeTexture, DirectionalLight, Engine,FreeCamera,HemisphericLight,Mesh,MeshBuilder,Observable,Scene, SceneLoader, StandardMaterial, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, PhysicsMotionType, PhysicsViewer, TransformNode, CubeMapToSphericalPolynomialTools } from "@babylonjs/core";
 import GameInputManager from "../../infrastructure/GameInputManager";
 import IGameScene from "../../common/interfaces/IGameScene";
 import "@babylonjs/loaders/glTF";
@@ -7,8 +7,8 @@ import HavokPhysics, { HavokPhysicsWithBindings, Result } from '@babylonjs/havok
 import { TerrainMaterial } from "@babylonjs/materials/terrain";
 import { CharacterController } from "../../players/CharacterController";
 
-
-import playerMeshPath from "../../assets/player/vicent.babylon";
+//mark_23__animated__free.glb
+import playerMeshPath from "../../assets/player/Vincent.babylon";
 
 async function getInitializedHavok() {
   
@@ -81,14 +81,7 @@ export default class TutorialScene implements IGameScene{
 	  var light2 = new HemisphericLight("light2", new Vector3(-1, -0.5, 0), this._scene);
 	  light2.intensity = 0.2;
     
-    const skybox = MeshBuilder.CreateBox("skyBox", {size:250}, this._scene);
-	  const skyboxMaterial = new StandardMaterial("skyBox", this._scene);
-	  skyboxMaterial.backFaceCulling = false;
-	  skyboxMaterial.reflectionTexture = new CubeTexture(process.env.PUBLIC_URL+"/textures/skybox/skybox", this._scene);
-	  skyboxMaterial.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
-	  skyboxMaterial.diffuseColor = new Color3(0, 0, 0);
-	  skyboxMaterial.specularColor = new Color3(0, 0, 0);
-	  skybox.material = skyboxMaterial;
+    // w
 
     var terrainMaterial = new TerrainMaterial("terrainMaterial",this._scene);
     terrainMaterial.specularColor = new Color3(0.5, 0.5, 0.5);
@@ -124,6 +117,7 @@ export default class TutorialScene implements IGameScene{
       onReady: (mesh, heightBuffer) => {
         const groundAggregate = new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0 });
         this.loadPlayer();
+        
       },
     });
     groundMesh.position = new Vector3(1,1,-10);
@@ -163,8 +157,9 @@ export default class TutorialScene implements IGameScene{
     }
   };
 
-  public loadPlayer(){
-    SceneLoader.ImportMesh("",process.env.PUBLIC_URL+"/meshes/","vincent.babylon",this._scene,(meshes,particleSystems,skeletons)=>{
+  public async loadPlayer(){
+
+    SceneLoader.ImportMesh("",process.env.PUBLIC_URL+"/meshes/","Vincent.babylon",this._scene,(meshes,particleSystems,skeletons)=>{
       let player:Mesh = meshes[0] as Mesh;
       let skeleton = skeletons[0];
       player.skeleton = skeleton;
@@ -190,9 +185,8 @@ export default class TutorialScene implements IGameScene{
       let beta = Math.PI/2.5;
       let target = new Vector3(player.position.x,player.position.y+1.5,player.position.z);
       
-      console.log("laoding meshes 1.1");
-      let camera = new ArcRotateCamera("ArcRotateCamera",alpha,beta,5,target,this._scene);
-
+      let camera = new ArcRotateCamera("ArcRotateCamera",alpha,beta,0.5,target,this._scene);
+      this._camera = camera;
       //standard camera setting
       camera.wheelPrecision = 15;
       camera.checkCollisions = false;
@@ -203,9 +197,9 @@ export default class TutorialScene implements IGameScene{
       camera.keysUp = [];
       camera.keysDown = [];
       //how close can the camera come to player
-      camera.lowerRadiusLimit = 2;
+      camera.lowerRadiusLimit = 0.5;
       //how far can the camera go from the player
-      camera.upperRadiusLimit = 20;
+      camera.upperRadiusLimit = 5;
       camera.attachControl(this._engine.getRenderingCanvas(),false);
 
       //let CharacterController = org.ssatguru.babylonjs.component.CharacterController;
@@ -242,12 +236,88 @@ export default class TutorialScene implements IGameScene{
       //cc.setStrafeRightKey("")
 
       cc.start();
-
+      this._playerMesh = player;
+      //console.log('checking player mesh',this._playerMesh)
+      this.loadWeapon()
       // this._engine.runRenderLoop(function(){
       //     scene.render();
       // });
 
     });
+  }
+
+  private async loadWeapon(){
+    const weaponImportResult = await SceneLoader.ImportMeshAsync(
+      "",
+      process.env.PUBLIC_URL+"/meshes/","mark_23__animated__free.glb",
+      this._scene,
+      undefined,
+      ".glb");
+
+      let transformNode = new TransformNode('weaponTransformNode');
+      transformNode.scaling = new Vector3(3.5, 3.5, 3.5);
+      transformNode.parent = this._playerMesh;
+
+
+    const weaponMesh = weaponImportResult.meshes[0];
+    weaponMesh.skeleton = weaponImportResult.skeletons[0];
+    console.log(weaponMesh)
+    //console.log('weapon',weaponMesh)
+    //weaponMesh.scaling.x = 2.05;
+    //weaponMesh.scaling.y = 2.05;
+    //weaponMesh.scaling.z = 2.05;
+    weaponMesh.scaling = new Vector3(0.025,0.025,-0.025);
+    weaponMesh.parent = transformNode;
+
+
+    // good scaling here!!!!!!!!!
+    //weaponMesh.scaling = new Vector3(0.025,0.025,-0.025);
+    weaponMesh.position.y = 3;
+
+    //
+    
+    //weaponMesh.position = this._playerMesh.position.clone();
+    //weaponMesh.setParent(gun);
+    
+    
+    
+    weaponMesh.isPickable = false;
+    //weaponMesh.rotation = playerNode.rotation;
+
+    // akm.parent = this._playerMesh;
+    // akm.position = new Vector3(0.5, -0.7, 0.5);
+    // akm.rotation.x = -0.01;
+   console.log(weaponImportResult.meshes)
+  // weaponMesh.scaling = new Vector3(25, 25,25);
+    //weaponMesh.attachToBone(this._playerMesh.skeleton.bones[4],this._playerMesh)
+		//weaponMesh.scaling.x = -0.05;
+    //weaponMesh.scaling.y = 0.05;
+    //weaponMesh.scaling.z = 0.05;
+    var sphere = MeshBuilder.CreateSphere("sphere1", {diameter:5, segments:16}, this._scene);
+
+    // Move the sphere upward 1/2 its height    
+	sphere.scaling = new Vector3(0.1, 0.1, 0.1);
+	var materialSphere = new StandardMaterial("texture1", this._scene);
+	materialSphere.diffuseColor = Color3.Red();
+	sphere.material = materialSphere;
+
+  sphere.attachToBone(this._playerMesh.skeleton.bones[2], this._playerMesh);
+		sphere.scaling = new Vector3(0.05, 0.05, 0.05);
+   // weaponMesh.scaling.x = 2.05;
+   // weaponMesh.scaling.y = 2.05;
+    //weaponMesh.scaling.z = 2.05;
+    
+    //weaponMesh.parent = akm;
+    //weaponMesh.scaling = new Vector3(1,1,1)
+    //const skels = weaponImportResult.skeletons;
+
+
+    this._scene.registerBeforeRender(()=>{
+      //weaponMesh.position = this._playerMesh.position;
+      //weaponMesh.position = this._playerMesh.position;
+      //weaponMesh.rotation.y = -this._camera.alpha;
+      //weaponMesh.rotation = playerNode.rotation;
+    })
   }
   
   public attachControls(){
