@@ -1,5 +1,5 @@
 import { FreeCamera, HemisphericLight, Mesh, MeshBuilder, Scene, Vector3 } from "@babylonjs/core"
-import SceneComponent, { OnRenderHandler, OnSceneReadyHandler } from "../infrastructure/SceneComponent"
+import SceneComponent, { OnRenderHandler, OnSceneReadyHandler } from "../common/models/SceneComponent"
 import { FC } from "react"
 
 let box: Mesh

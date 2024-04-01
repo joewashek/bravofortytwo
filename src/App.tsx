@@ -1,25 +1,43 @@
-import React from 'react';
-import { Routes,Route, Link } from 'react-router-dom';
-import Home from './home/Home';
-import SceneOne from './scene_one/SceneOne';
 import SceneTwo from './scene_two/SceneTwo';
-import SceneThree from './scene-three/SceneThree';
+import { FC, lazy, useState,Suspense } from 'react';
+import "./App.css";
+
+const Game = lazy(()=> import('./game/Game'))
 
 function App() {
+
+  const [playClicked,setPlayClicked] = useState(false);
+
   return (
-    <div>
-        <header>
+    <div id="app-container">
+      {
+        playClicked ? (
+          
+          <Suspense fallback={<div>loading..</div>}>
+            <Game />
+          </Suspense>
+          
+        ) : (
+          <div className="game-home">
+              <header className="Game-header">
+                  <h4>Bravo 1942</h4>
+                  <button className='play-button' onClick={()=> setPlayClicked(true)}>Play</button>
+              </header>
+          </div>
+        )
+      }
+        {/* <header>
             test header
             <Link to="/scenetwo">scene two</Link>
             <Link to="/sceneone">scene one</Link>
             <Link to="/scenethree">scene three</Link>
         </header>
         <Routes>
-            <Route path="/scenethree" element={<SceneThree/>}/>
+            
             <Route path="/scenetwo" element={<SceneTwo/>}/>
-            <Route path="/sceneone" element={<SceneOne/>}/>
+            
             <Route path="/" element={<Home/>}/>
-        </Routes>
+        </Routes> */}
     </div>
     
   );

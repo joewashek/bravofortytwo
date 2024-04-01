@@ -1,21 +1,14 @@
 import React, { useState, useRef, FC, useEffect } from 'react';
-
 import "@babylonjs/core/Physics/v2/physicsEngineComponent"  // side-effect adds scene.enablePhysics function
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent"; // side-effect for shadow generator
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { PhysicsShapeType } from '@babylonjs/core/Physics/v2/IPhysicsEnginePlugin';
 import { HavokPlugin } from '@babylonjs/core/Physics/v2/Plugins/havokPlugin';
 import HavokPhysics, { HavokPhysicsWithBindings } from '@babylonjs/havok'
-
-import { Scene, Engine,useBeforeRender } from 'react-babylonjs';
-
+import { Scene, Engine,useBeforeRender, SceneEventArgs } from 'react-babylonjs';
 import BouncySphere from '../sphere/BouncySphere';
 import '../App.css';
-
-//import * as CANNON from 'cannon';
 import { Color3, PhysicsBody, PhysicsShapeBox } from '@babylonjs/core';
-
-//window.CANNON = CANNON;
 
 const gravityVector = new Vector3(0, -9.81, 0);
 const RADIUS = 5;
@@ -39,21 +32,18 @@ const SceneOne: FC = () => {
       faLoaded.current = true;
       setFontsReady(true);
     }
-    ;(async()=>{
-      console.log('setHK')
-      
-      
-      console.log('binary loaded')
-      const havok = await HavokPhysics();
-      console.log(havok.wasmBinary)
-      console.log(havok.filePackagePrefixURL)
-      console.log(havok)
-      setHK(havok);
-      
+    (async()=>{
+      const havokInstance = await HavokPhysics();
+      setTimeout(() => {
+        setHK(havokInstance)
+      }, 1000);
     })()
   }, []);
 
-  
+  const setHavok = (e: SceneEventArgs)=>{
+    const scene = e.scene;
+    scene.enablePhysics(null, new HavokPlugin(false, HK))
+  }
 
   return (
     <div className="App">
@@ -62,7 +52,7 @@ const SceneOne: FC = () => {
           {
             HK ? 
             (
-              <Scene enablePhysics={[gravityVector, new HavokPlugin(true,HK)]} >
+              <Scene onSceneMount={setHavok} >
                 <arcRotateCamera name="arc" target={new Vector3(0, 1, 0)}
                   alpha={-Math.PI / 2} beta={(0.2 + (Math.PI / 4))} wheelPrecision={50}
                   radius={14} minZ={0.001} lowerRadiusLimit={8} upperRadiusLimit={20} upperBetaLimit={Math.PI / 2} />
