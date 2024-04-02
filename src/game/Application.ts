@@ -90,7 +90,7 @@ class Application{
       this.goToRunningState();
     });
 
-    this._tutorialScreen = new TutorialScene(this._engine,this._inputManager);
+    //this._tutorialScreen = new TutorialScene(this._engine,this._inputManager);
   }
 
   run(){
@@ -147,8 +147,9 @@ class Application{
   }
 
   private goToRunningState(){
-    
+    this._engine.displayLoadingUI();
     this._currentScene?.detachControls();
+    this._tutorialScreen = new TutorialScene(this._engine,this._inputManager);
     this._tutorialScreen?.scene.onReadyObservable.add(()=>{
       this._engine.hideLoadingUI();
     })

@@ -1,4 +1,4 @@
-import { ArcRotateCamera,HavokPlugin, Color3, Color4, CubeTexture, DirectionalLight, Engine,FreeCamera,HemisphericLight,Mesh,MeshBuilder,Observable,Scene, SceneLoader, StandardMaterial, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, PhysicsMotionType, PhysicsViewer, TransformNode, CubeMapToSphericalPolynomialTools } from "@babylonjs/core";
+import { ArcRotateCamera,HavokPlugin, Color3, Color4, CubeTexture, DirectionalLight, Engine,FreeCamera,HemisphericLight,Mesh,MeshBuilder,Observable,Scene, SceneLoader, StandardMaterial, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, PhysicsMotionType, PhysicsViewer, TransformNode, CubeMapToSphericalPolynomialTools, Quaternion, UniversalCamera } from "@babylonjs/core";
 import GameInputManager from "../../infrastructure/GameInputManager";
 import IGameScene from "../../common/interfaces/IGameScene";
 import "@babylonjs/loaders/glTF";
@@ -7,8 +7,10 @@ import HavokPhysics, { HavokPhysicsWithBindings, Result } from '@babylonjs/havok
 import { TerrainMaterial } from "@babylonjs/materials/terrain";
 import { CharacterController } from "../../players/CharacterController";
 
+//https://playground.babylonjs.com/#GZYGLJ#34
 //mark_23__animated__free.glb
 import playerMeshPath from "../../assets/player/Vincent.babylon";
+import PlayerCamera, { PLAYER_CAMERA } from "../../players/player_camera";
 
 async function getInitializedHavok() {
   
@@ -26,6 +28,7 @@ export default class TutorialScene implements IGameScene{
 
   private _scene: Scene;
   private _camera: ArcRotateCamera;
+  private _playerCamera: PlayerCamera;
   //private _cameraTest: FreeCamera | null = null;
   private _onStateChangeObservable = new Observable();
   private _state: number = TUTORIAL_STATE.CREATED;
@@ -46,16 +49,38 @@ export default class TutorialScene implements IGameScene{
     scene.clearColor = new Color4(0.75,0.75,0.75,1);
     scene.ambientColor = new Color3(1,1,1);
     
-    //this._camera = new ArcRotateCamera("camera1",  3 * Math.PI / 8, 3 * Math.PI / 8, 15, new Vector3(0, 2, 0), scene);
-    // this._camera.upperBetaLimit = Math.PI / 2.2;
-    //this._camera.attachControl(this._engine.getRenderingCanvas(), true);
+    this._camera = new ArcRotateCamera("camera1",  3 * Math.PI / 8, 3 * Math.PI / 8, 15, new Vector3(0, 2, 0), scene);
+    this._camera.upperBetaLimit = Math.PI / 2.2;
+    this._camera.attachControl(this._engine.getRenderingCanvas(), true);
+
+    const testCamera = new UniversalCamera("universal",new Vector3(0,12,0),this._scene);
+    testCamera.attachControl();
+    
 
     this._gameState = TUTORIAL_STATE.INITIALIZED;
 
+    //const havokInstance = await HavokPhysics();
+    const assumedFramesPerSecond = 60;
+const earthGravity = -9.81;
+    HavokPhysics()
+    .then(havokInstance => {
+      this._scene.enablePhysics(new Vector3(0, earthGravity / assumedFramesPerSecond, 0), new HavokPlugin(true,havokInstance))
+      this.setupEnvironment();
+      
+      //this.loadPlayerCamera();
+    });
+   
+
     //this.testEnv(scene);
-    this.setupEnvironment();
+    //this.setupEnvironment();
     //this.loadPlayer();
+    //this.loadPlayerCamera();
     this._scene = scene;
+
+    // scene.onPointerDown = (evt) => {
+    //   if (evt.button === 0) this._engine.enterPointerlock();
+    //   if (evt.button === 1) this._engine.exitPointerlock();
+    // };
   }
   
 
@@ -73,8 +98,7 @@ export default class TutorialScene implements IGameScene{
 
   private async setupEnvironment(){
 
-    const havokInstance = await HavokPhysics();
-    this._scene.enablePhysics(new Vector3(0, -9.8, 0), new HavokPlugin(true,havokInstance))
+    
     
     var light1 = new HemisphericLight("light1", new Vector3(1, 0.5, 0), this._scene);
 	  light1.intensity = 0.7;
@@ -116,25 +140,25 @@ export default class TutorialScene implements IGameScene{
       subdivisions: 30,
       onReady: (mesh, heightBuffer) => {
         const groundAggregate = new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0 });
-        this.loadPlayer();
+        //this.loadPlayer();
         
       },
     });
     groundMesh.position = new Vector3(1,1,-10);
     //groundMesh.position.y = -2.05;
     groundMesh.position.y = -10;
-    groundMesh.checkCollisions = true;
+   // groundMesh.checkCollisions = true;
     groundMesh.isPickable = true;
     groundMesh.receiveShadows = true;
     groundMesh.material = terrainMaterial;
 
     //static box for reference 
-    var box = MeshBuilder.CreateBox("Box", {width:2, height:2,updatable:true}, this._scene);
-    box.material = new StandardMaterial("", this._scene);
-    box.position.x+=3
-    box.position.y=6.5
-    //box.position.z = 24;
-    box.checkCollisions = true;
+    // var box = MeshBuilder.CreateBox("Box", {width:2, height:2,updatable:true}, this._scene);
+    // box.material = new StandardMaterial("", this._scene);
+    // box.position.x+=3
+    // box.position.y=6.5
+    // //box.position.z = 24;
+    // box.checkCollisions = true;
    
 
   }
@@ -156,6 +180,31 @@ export default class TutorialScene implements IGameScene{
           break;
     }
   };
+
+  public async loadPlayerCamera(){
+    
+    this._playerCamera = new PlayerCamera(new Vector3(0,12,0),this._scene);
+    this._playerCamera.attachControl();
+    this._scene.setActiveCameraByName(PLAYER_CAMERA);
+
+    // Character
+    const characterMesh = MeshBuilder.CreateCapsule("character", {height: 1.8, radius: 0.45 });
+    const characterMaterial = new StandardMaterial("character");
+    characterMaterial.diffuseColor = new Color3(1, 0.56, 0.56);
+    characterMesh.material = characterMaterial;
+    characterMesh.position.set(0,1,-3);
+    const characterAggregate = new PhysicsAggregate(characterMesh,
+                                                            PhysicsShapeType.CAPSULE,
+                                                            { mass: 1, friction: 0.5, restitution: 0 },
+                                                            this.scene);
+    const characterBody = characterAggregate.body;
+    characterBody.disablePreStep = false;
+    characterBody.setMassProperties({ inertia: Vector3.ZeroReadOnly });
+
+    characterMesh.parent = this._playerCamera;
+    characterMesh.setParent(this._playerCamera);
+    
+  }
 
   public async loadPlayer(){
 
@@ -254,25 +303,22 @@ export default class TutorialScene implements IGameScene{
       undefined,
       ".glb");
 
-      let transformNode = new TransformNode('weaponTransformNode');
-      transformNode.scaling = new Vector3(3.5, 3.5, 3.5);
-      transformNode.parent = this._playerMesh;
-
+     
 
     const weaponMesh = weaponImportResult.meshes[0];
-    weaponMesh.skeleton = weaponImportResult.skeletons[0];
-    console.log(weaponMesh)
+    //weaponMesh.skeleton = weaponImportResult.skeletons[0];
+    //console.log(weaponMesh)
     //console.log('weapon',weaponMesh)
     //weaponMesh.scaling.x = 2.05;
     //weaponMesh.scaling.y = 2.05;
     //weaponMesh.scaling.z = 2.05;
-    weaponMesh.scaling = new Vector3(0.025,0.025,-0.025);
-    weaponMesh.parent = transformNode;
-
-
+    //weaponMesh.scaling = new Vector3(1.025,1.025,-1.025);
+    //weaponMesh.parent = this._playerMesh;
+      weaponMesh.setParent(this._playerMesh)
+    //this._playerMesh.addChild(weaponMesh)
     // good scaling here!!!!!!!!!
     //weaponMesh.scaling = new Vector3(0.025,0.025,-0.025);
-    weaponMesh.position.y = 3;
+   // weaponMesh.position.y = 3;
 
     //
     
@@ -287,9 +333,19 @@ export default class TutorialScene implements IGameScene{
     // akm.parent = this._playerMesh;
     // akm.position = new Vector3(0.5, -0.7, 0.5);
     // akm.rotation.x = -0.01;
+    console.log('mesh result')
+  console.log(weaponImportResult)
    console.log(weaponImportResult.meshes)
-  // weaponMesh.scaling = new Vector3(25, 25,25);
-    //weaponMesh.attachToBone(this._playerMesh.skeleton.bones[4],this._playerMesh)
+  weaponMesh.scaling = new Vector3(0.5, 0.5,0.5);
+  weaponMesh.position = this._playerMesh.position.clone();
+
+  weaponMesh.rotationQuaternion = Quaternion.FromEulerVector(new Vector3(0.9, 1.2, 1.4));
+  setTimeout(() => {
+    weaponMesh.attachToBone(this._playerMesh.skeleton.bones[3],this._playerMesh)
+  }, 3000);
+    
+    //weaponMesh.scaling = new Vector3(5, 5,5);
+    
 		//weaponMesh.scaling.x = -0.05;
     //weaponMesh.scaling.y = 0.05;
     //weaponMesh.scaling.z = 0.05;
