@@ -20,14 +20,15 @@ export default class PlayerCamera extends FreeCamera {
     private setup():void{
         
       this.fov =1;
-      //this.inertia = 0;
+      this.inertia = 0.0;
       
-        //this.applyGravity = true;
+        this.applyGravity = true;
         this.checkCollisions = true;
         //this.ellipsoid = new Vector3(2, 4, 1);
-       this.ellipsoid = new Vector3(1.5, 3.0, 1.5);
-        this.ellipsoidOffset = new Vector3(0, 3, 0);
-        
+       this.ellipsoid = new Vector3(1, 2, 1);
+        this.ellipsoidOffset = new Vector3(0, 2, 0);
+        //camera.ellipsoid = new BABYLON.Vector3(0.5, 1, 0.5);
+    //camera.ellipsoidOffset = new BABYLON.Vector3(0, 1, 0); 
         this.minZ = 0.45;
         this.speed = this._walkingSpeed;
         this.angularSensibility = 4000;

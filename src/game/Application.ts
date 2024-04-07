@@ -8,6 +8,7 @@ import { delay } from '../common/utility/time-utility';
 import GameInputManager from '../infrastructure/GameInputManager';
 import IGameScene from '../common/interfaces/IGameScene';
 import TutorialScene from '../scenes/tutorial/TutorialScene';
+import characterControls from '../players/characterControlsMap';
 
 class Application{
 
@@ -27,6 +28,7 @@ class Application{
     let currentState: number | null = null;
 
     function setState(newState:number):number{
+      
       previousState = currentState;
       currentState = newState;
       logger.logInfo(`App State changed. Previous state: ${previousState} - New State: ${newState}`);
@@ -149,7 +151,7 @@ class Application{
   private goToRunningState(){
     this._engine.displayLoadingUI();
     this._currentScene?.detachControls();
-    this._tutorialScreen = new TutorialScene(this._engine,this._inputManager);
+    this._tutorialScreen = new TutorialScene(this._engine,new GameInputManager(this._engine,characterControls.characterControlsMap));
     this._tutorialScreen?.scene.onReadyObservable.add(()=>{
       this._engine.hideLoadingUI();
     })

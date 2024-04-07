@@ -4,8 +4,6 @@ import { TextBlock, TextWrapping } from "@babylonjs/gui/2D/controls/textBlock";
 import { animationFps, fadeAnimation, flipAnimation, scaleAnimation } from "../common/models/animation-types";
 import CutSceneSegment from "../common/models/CutSceneSegment";
 import logger from "../infrastructure/logger";
-
-import titleSongUrl from "../assets/sounds/space-trucker-title-theme.m4a";
 import poweredByUrl from "../assets/powered-by.png";
 import communityUrl from "../assets/splash-screen-community.png";
 import spaceTruckerRigUrl from "../assets/space-trucker-and-rig.png";
@@ -160,6 +158,7 @@ export default class SplashScene implements IGameScene{
     if (!this._skipRequested && !lastState) {
         logger.logInfo("Key press detected. Skipping cut scene.");
         this._skipRequested = true;
+        this.music?.stop();
         return true;
     }
     return false;

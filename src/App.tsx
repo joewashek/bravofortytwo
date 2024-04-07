@@ -1,6 +1,6 @@
-import SceneTwo from './scene_two/SceneTwo';
-import { FC, lazy, useState,Suspense } from 'react';
+import {lazy, useState,Suspense } from 'react';
 import "./App.css";
+import LoadingModal from './game/LoadingModal';
 
 const Game = lazy(()=> import('./game/Game'))
 
@@ -13,7 +13,7 @@ function App() {
       {
         playClicked ? (
           
-          <Suspense fallback={<div>loading..</div>}>
+          <Suspense fallback={<LoadingModal />}>
             <Game />
           </Suspense>
           
@@ -21,23 +21,11 @@ function App() {
           <div className="game-home">
               <header className="Game-header">
                   <h4>Bravo 1942</h4>
-                  <button className='play-button' onClick={()=> setPlayClicked(true)}>Play</button>
+                  <button className='play-button font-allerta' onClick={()=> setPlayClicked(true)}>Play</button>
               </header>
           </div>
         )
       }
-        {/* <header>
-            test header
-            <Link to="/scenetwo">scene two</Link>
-            <Link to="/sceneone">scene one</Link>
-            <Link to="/scenethree">scene three</Link>
-        </header>
-        <Routes>
-            
-            <Route path="/scenetwo" element={<SceneTwo/>}/>
-            
-            <Route path="/" element={<Home/>}/>
-        </Routes> */}
     </div>
     
   );

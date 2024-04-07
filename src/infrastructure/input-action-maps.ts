@@ -1,4 +1,4 @@
-const inputControlsMap: { [key:string]: any} = {
+const inputControlsMap: { [key:string]: string} = {
   /* Keyboard Mappings */
   w: 'MOVE_UP', 87: 'MOVE_UP',
   s: 'MOVE_DOWN', 83: 'MOVE_DOWN',

@@ -8,7 +8,7 @@ export class ThirdPersonController {
     private player!: BABYLON.AbstractMesh;
     private scene!: BABYLON.Scene;
     private camera!: BABYLON.ArcRotateCamera;
-
+    private rootMesh: BABYLON.AbstractMesh;
     // 地板物理光线拾取
     private physEngine: BABYLON.Nullable<IPhysicsEngine>;
     private engine!: BABYLON.Engine;
@@ -72,6 +72,7 @@ export class ThirdPersonController {
             this.updateState();
         });
         this.scene.onBeforeAnimationsObservable.add(() => {
+          
             // 给当前动画增加权重从0加到1
             if (this.curAnimParam.weight < 1) {
                 this.curAnimParam.weight = BABYLON.Scalar.Clamp(
@@ -116,7 +117,9 @@ export class ThirdPersonController {
         // this.wallkingSound.play();
     }
 
-    
+    get RootMesh(){
+      return this.rootMesh;
+    }
 
     private initPlayer(container: BABYLON.AssetContainer) {
         this.meshContent = container;
@@ -142,11 +145,15 @@ export class ThirdPersonController {
         mesheRoot.position.z = 25;
         player.checkCollisions = true;
         mesheRoot.scaling = new BABYLON.Vector3(2, 2, 2);
+        
+        this.rootMesh = mesheRoot;
         player.position.y = 15;
         player.position.z = 25;
         player.addChild(mesheRoot);
         this.player = player;
         this.camera.setTarget(player);
+        // raised camera up to torse/head.  0,0 is at waiste
+        this.camera.targetScreenOffset = new BABYLON.Vector2(0,-1)
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -311,14 +318,14 @@ export class ThirdPersonController {
             !this.jumpState.hasTask &&
             this.footRaycast.hasHit
         ) {
-            console.log('起跳');
+            //console.log('起跳');
             this.jumpState.jump = true;
             this.jumpState.startHeight = y + 0;
             this.onAnimWeight(AnimationKey.Falling);
         }
 
         if (this.footRaycast.hasHit && this.jumpState.fall && !this.jumpState.jump) {
-            console.log('跳跃落下着地1');
+            //console.log('跳跃落下着地1');
             this.jumpState.fall = false;
             if (this.iswsad) {
                 this.onAnimWeight(AnimationKey.Running);
@@ -334,13 +341,13 @@ export class ThirdPersonController {
             this.footRaycast.hasHit &&
             this.jumpState.hasTask
         ) {
-            console.log('跳跃落下着地2');
+            //console.log('跳跃落下着地2');
             this.jumpState.hasTask = false;
         }
 
         // 跳下来的时候 并非 jumpState 跳跃掉下
         if (!this.jumpState.jump && !this.footRaycast.hasHit) {
-            console.log('自由落下');
+            //console.log('自由落下');
             this.onAnimWeight(AnimationKey.Falling);
         }
 
@@ -352,7 +359,7 @@ export class ThirdPersonController {
             this.curAnimParam.anim !== AnimationKey.Idle &&
             !this.iswsad
         ) {
-            console.log('自由着地', this.iswsad);
+            //console.log('自由着地', this.iswsad);
             if (this.iswsad) {
                 this.onAnimWeight(AnimationKey.Running);
             } else {

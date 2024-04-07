@@ -4,7 +4,7 @@ import logger from "./logger";
 
 import InputControls from "./input-action-maps";
 
-const controlsMap = InputControls.inputControlsMap;
+const defaultControlsMap = InputControls.inputControlsMap;
 
 class GameInputManager {
 
@@ -34,7 +34,10 @@ class GameInputManager {
         }
         return this._inputSubscriptions;
     }
-    constructor(private _engine:Engine) {
+    constructor(
+      private _engine:Engine,
+      private _controlsMap: { [key:string]: string} = defaultControlsMap
+      ) {
         this._onInputAvailable = new Observable();
     }
 
@@ -78,7 +81,7 @@ class GameInputManager {
 
         const inputs = ik
             .map((key:string) => {
-                return { action: controlsMap[key], lastEvent: im[key] };
+                return { action: this._controlsMap[key], lastEvent: im[key] };
             });
         if (inputs && inputs.length > 0) {
             this.onInputAvailableObservable.notifyObservers(inputs);
@@ -105,9 +108,10 @@ class GameInputManager {
     enableKeyboard(scene:Scene) {
         const observer = scene.onKeyboardObservable.add((kbInfo) => {
             const key = kbInfo.event.key;
-            const keyMapped = InputControls.inputControlsMap[key];
+            const keyMapped = this._controlsMap[key];
 
             if (!keyMapped) {
+              console.log("Unmapped key processed by app", key);
                 return;
             }
 

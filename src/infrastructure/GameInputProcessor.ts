@@ -26,12 +26,9 @@ class GameInputProcessor {
     onCommandObservable = new Observable();
     private _actionState: any = {};
     private _actionMap: any = {};
-    private _actionList: { [key:string]: any};
-    actionList = [];
-    private lastActionState: any = null;
-    controlsAttached = false;
-    inputManager;
-    private _screen: IGameScene;
+    //private _actionList: { [key:string]: any};
+    private _lastActionState: any = null;
+    private _controlsAttached = false;
     private _scene: Scene;
     private _onInputObserver: Observer<unknown> | null = null;
 
@@ -45,51 +42,48 @@ class GameInputProcessor {
       return this._screen;
     }
 
-    constructor(screen:IGameScene, inputManager: GameInputManager,actionList:{ [key:string]: any}) {
-      this._scene = screen.scene;
-      this._screen = screen;
-      this.inputManager = inputManager;
-      this._actionList = actionList;
-      this._inputQueue = [];
-    
+    constructor(
+      private _screen:IGameScene, 
+      private _inputManager: GameInputManager,
+      private _actionList:{ [key:string]: any}) {
+      this._scene = this._screen.scene;
+      this.buildActionMap(_actionList, false);
 
-      this.buildActionMap(actionList, false);
       //this.scene.onBeforeRenderObservable.add(() => this.update());
-
-
       //this.onCommandObservable.add(inputs => this.inputCommandHandler(inputs));
 
     }
     attachControl() {
-      if (!this.controlsAttached) {
+      if (!this._controlsAttached) {
         logger.logInfo("input processor attaching control for screen ");
         this._scene.attachControl();
-        this.inputManager.registerInputForScene(this._scene);
-        this._onInputObserver = this.inputManager.onInputAvailableObservable.add((inputs:any) => {
+        this._inputManager.registerInputForScene(this._scene);
+        this._onInputObserver = this._inputManager.onInputAvailableObservable.add((inputs:any) => {
             this.inputAvailableHandler(inputs);
         });
-        this.controlsAttached = true;
+        this._controlsAttached = true;
       }
     }
     detachControl() {
-        if (this.controlsAttached) {
+        if (this._controlsAttached) {
             logger.logInfo("input processor detaching control for screen ");
 
-            this.inputManager.onInputAvailableObservable.remove(this._onInputObserver);
-            this.inputManager.unregisterInputForScene(this._scene);
-            this.controlsAttached = false;
+            this._inputManager.onInputAvailableObservable.remove(this._onInputObserver);
+            this._inputManager.unregisterInputForScene(this._scene);
+            this._controlsAttached = false;
             this._inputQueue = [];
         }
     }
     update() {
 
-        if (!this.controlsAttached) {
+        if (!this._controlsAttached) {
             return;
         }
-        this.inputManager.getInputs(this._scene);
-        this.lastActionState = this._actionState;
 
+        this._inputManager.getInputs(this._scene);
+        this._lastActionState = this._actionState;
         const inputQueue = this.inputQueue;
+
         while (inputQueue.length > 0) {
             let input = inputQueue.pop();
             this.inputCommandHandler(input);
@@ -111,7 +105,8 @@ class GameInputProcessor {
             if (!actionFn) {
                 return;
             }
-            this._actionMap[action] = actionDef.shouldBounce() ? bounce(actionFn, 250, this) : actionFn;
+
+            this._actionMap[action] = actionDef.shouldBounce() ? bounce(actionFn, 250, this) : actionFn.bind(this._screen);
         });
     }
 
@@ -121,7 +116,7 @@ class GameInputProcessor {
             const actionFn = this._actionMap[i.action];
             if (actionFn) {
               
-                const priorState = this.lastActionState ? this.lastActionState[i.action] : null;
+                const priorState = this._lastActionState ? this._lastActionState[i.action] : null;
                 
                 // the way we're dispatching this function in this context results in a loss of the "this" context for the
                 // function being dispatched. Calling bind on the function object returns a new function with the correct
