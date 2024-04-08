@@ -30,9 +30,10 @@ class GameInputProcessor {
     private _lastActionState: any = null;
     private _controlsAttached = false;
     private _scene: Scene;
-    private _onInputObserver: Observer<unknown> | null = null;
+    private _onInputObserver: Observer<{action: string;lastEvent: any;}[]> | null = null;
+    private _onInputDoneObserver: Observer<{action: string;lastEvent: any;}[]> | null = null;
 
-    private _inputQueue:any = [];
+    private _inputQueue:{action: string;lastEvent: any;}[][] = [];
 
     get inputQueue() {
         return this._inputQueue;
@@ -58,7 +59,10 @@ class GameInputProcessor {
         logger.logInfo("input processor attaching control for screen ");
         this._scene.attachControl();
         this._inputManager.registerInputForScene(this._scene);
-        this._onInputObserver = this._inputManager.onInputAvailableObservable.add((inputs:any) => {
+        this._onInputObserver = this._inputManager.onInputAvailableObservable.add((inputs) => {
+            this.inputAvailableHandler(inputs);
+        });
+        this._onInputDoneObserver = this._inputManager.onInputDoneAvailableObservable.add((inputs) => {
             this.inputAvailableHandler(inputs);
         });
         this._controlsAttached = true;
@@ -81,16 +85,21 @@ class GameInputProcessor {
         }
 
         this._inputManager.getInputs(this._scene);
+        this._inputManager.getInputsDone(this._scene);
         this._lastActionState = this._actionState;
-        const inputQueue = this.inputQueue;
+        this._actionState = {};
 
+        const inputQueue = this.inputQueue;
         while (inputQueue.length > 0) {
-            let input = inputQueue.pop();
-            this.inputCommandHandler(input);
+          
+          let input = inputQueue.pop();
+
+          this.inputCommandHandler(input);
         }
+        
     }
 
-    inputAvailableHandler(inputs:any) {
+    inputAvailableHandler(inputs:{action: string;lastEvent: any;}[]) {
         this._inputQueue.push(inputs);
     }
 
@@ -98,7 +107,7 @@ class GameInputProcessor {
         if (createNew) {
             this._actionMap = {};
         }
-        //const actionList = keyboardControlMap.menuActionList
+        
         actionList.forEach((actionDef:any) => {
             const action = actionDef.action;
             const actionFn = (this._screen as any)[action];
@@ -114,19 +123,22 @@ class GameInputProcessor {
         input.forEach((i:any) => {
             const inputParam = i.lastEvent;
             const actionFn = this._actionMap[i.action];
+
             if (actionFn) {
-              
                 const priorState = this._lastActionState ? this._lastActionState[i.action] : null;
                 
                 // the way we're dispatching this function in this context results in a loss of the "this" context for the
                 // function being dispatched. Calling bind on the function object returns a new function with the correct
                 // "this" set as expected. That function is immediately invoked with the target and magnitude parameter values.
                 
-                this._actionState[i.action] = actionFn({priorState}, inputParam);
+                const returnValue = actionFn({priorState}, inputParam);
+                this._actionState[i.action] = returnValue;
                 // use the return value of the actionFn to allow handlers to maintain individual states (if they choose).
                 // handlers that don't need to maintain state also don't need to know what to return, 
                 // since undefined == null == false.
 
+            }else{
+              console.log('no action')
             }
         });
     }

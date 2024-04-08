@@ -1,4 +1,4 @@
-import { ArcRotateCamera,HavokPlugin, Color3, Color4, Engine,HemisphericLight,Mesh,MeshBuilder,Observable,Scene, SceneLoader, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, Quaternion, AssetContainer, ISceneLoaderProgressEvent, AnimationGroup } from "@babylonjs/core";
+import { ArcRotateCamera,HavokPlugin, Color3, Color4, Engine,HemisphericLight,Mesh,MeshBuilder,Observable,Scene, SceneLoader, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, Quaternion, AssetContainer, ISceneLoaderProgressEvent, AnimationGroup, KeyboardInfo } from "@babylonjs/core";
 import GameInputManager from "../../infrastructure/GameInputManager";
 import IGameScene from "../../common/interfaces/IGameScene";
 import "@babylonjs/loaders/glTF";
@@ -7,10 +7,14 @@ import HavokPhysics from '@babylonjs/havok';
 import { TerrainMaterial } from "@babylonjs/materials/terrain";
 import GameInputProcessor from "../../infrastructure/GameInputProcessor";
 import GameSoundManager from "../../infrastructure/GameSoundManager";
-import FirstPersonCharacter from "../../players/FirstPersonCharacter";
+import FirstPersonCharacter, { CharacterDirection } from "../../players/FirstPersonCharacter";
 
 const actionList = [
-  {action: "RELOAD", shouldBounce: () => true },
+  {action: "RELOAD", shouldBounce: () => false },
+  {action: "MOVE_FORWARD", shouldBounce: () => false },
+  {action: "MOVE_BACK", shouldBounce: () => false },
+  {action: "MOVE_RIGHT", shouldBounce: () => false },
+  {action: "MOVE_LEFT", shouldBounce: () => false },
 ]
 
 const TUTORIAL_STATE = Object.freeze({
@@ -132,10 +136,10 @@ export default class TutorialScene implements IGameScene{
         this.loadPlayer();
       },
     });
-    groundMesh.position = new Vector3(1,1,-10);
+    //groundMesh.position = new Vector3(0, 0, 0)
     groundMesh.position.y = -10;
     groundMesh.checkCollisions = true;
-    groundMesh.isPickable = true;
+    groundMesh.isPickable = false;
     groundMesh.receiveShadows = true;
     groundMesh.material = terrainMaterial;
 
@@ -148,6 +152,7 @@ export default class TutorialScene implements IGameScene{
   public update (deltaTime:number | null){
     const dT = deltaTime ?? (this.scene.getEngine().getDeltaTime() / 1000);
     this._actionProcessor?.update();
+    this._localPlayer?.update(dT);
 
     switch (this.gameState) {
       case TUTORIAL_STATE.CREATED:
@@ -161,7 +166,7 @@ export default class TutorialScene implements IGameScene{
 
   public async loadPlayer(){
     
-    this._localPlayer = new FirstPersonCharacter(this._scene,this._camera,new Vector3(10,10,10));
+    this._localPlayer = new FirstPersonCharacter(this._scene,this._camera,new Vector3(10,15,10));
     this.loadPistol();
 
   }
@@ -236,7 +241,48 @@ export default class TutorialScene implements IGameScene{
     this._gameState = TUTORIAL_STATE.RUNNING;
   }
 
-  private RELOAD(state:any){
+  private RELOAD(state:any,data:any){
     console.log('RELOAD Fired!!!!!')
+    console.log(data)
+  }
+
+  private MOVE_FORWARD(state:any,data:KeyboardInfo){
+    
+    if(data){
+      const isMovingForward = data.type === 1;
+      this._localPlayer.moveDirection(CharacterDirection.FORWARD,isMovingForward)
+    }
+    return "moving forward"
+    
+  }
+
+  private MOVE_BACK(state:any,data:KeyboardInfo){
+    
+    if(data){
+      const isMovingBack = data.type === 1;
+      this._localPlayer.moveDirection(CharacterDirection.BACK,isMovingBack)
+    }
+    return "moving back"
+    
+  }
+
+  private MOVE_LEFT(state:any,data:KeyboardInfo){
+    
+    if(data){
+      const isMovingLeft = data.type === 1;
+      this._localPlayer.moveDirection(CharacterDirection.LEFT,isMovingLeft)
+    }
+    return "moving left"
+    
+  }
+
+  private MOVE_RIGHT(state:any,data:KeyboardInfo){
+    
+    if(data){
+      const isMovingRight = data.type === 1;
+      this._localPlayer.moveDirection(CharacterDirection.RIGHT,isMovingRight)
+    }
+    return "moving right"
+    
   }
 }

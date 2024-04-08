@@ -8,9 +8,17 @@ const defaultControlsMap = InputControls.inputControlsMap;
 
 class GameInputManager {
 
-    private _onInputAvailable: Observable<unknown>;
+    private _onInputAvailable: Observable<{
+      action: string;
+      lastEvent: any;
+  }[]>;
+    private _onInputDoneAvailable: Observable<{
+      action: string;
+      lastEvent: any;
+  }[]>;
     private _inputSubscriptions:any = [];
     private _inputMap: { [key:string]: any} = {};
+    private _inputDoneMap: { [key:string]: any} = {};
     private _inputKeys = [];
 
     get hasInput() {
@@ -23,10 +31,19 @@ class GameInputManager {
         }
         return this._inputMap;
     }
+    get inputDoneMap() {
+      if (!this._inputDoneMap) {
+          this._inputDoneMap = {};
+      }
+      return this._inputDoneMap;
+  }
 
     get onInputAvailableObservable() {
         return this._onInputAvailable;
     }
+    get onInputDoneAvailableObservable() {
+      return this._onInputDoneAvailable;
+  }
 
     get inputSubscriptions() {
         if (!this._inputSubscriptions) {
@@ -39,6 +56,7 @@ class GameInputManager {
       private _controlsMap: { [key:string]: string} = defaultControlsMap
       ) {
         this._onInputAvailable = new Observable();
+        this._onInputDoneAvailable = new Observable();
     }
 
     registerInputForScene(sceneToRegister:Scene) {
@@ -88,6 +106,27 @@ class GameInputManager {
         }
         return inputs;
     }
+    getInputsDone(scene:Scene) {
+
+      const sceneInputHandler = this.inputSubscriptions.find((is:any) => is.scene === scene);
+      if (!sceneInputHandler) {
+          return;
+      }
+      // gamepad i think
+      sceneInputHandler.subscriptions.forEach((s:any) => s.checkInputs());
+      const im = this.inputDoneMap;
+      const ik = Object.keys(im);
+
+      const inputs = ik
+          .map((key:string) => {
+              return { action: this._controlsMap[key], lastEvent: im[key] };
+          });
+      if (inputs && inputs.length > 0) {
+          this.onInputDoneAvailableObservable.notifyObservers(inputs);
+      }
+      ik.forEach(k => delete this.inputDoneMap[k])
+      return inputs;
+  }
 
     enableMouse(scene:Scene) {
         const obs = scene.onPointerObservable.add((pointerInfo) => {
@@ -106,7 +145,9 @@ class GameInputManager {
     }
 
     enableKeyboard(scene:Scene) {
+      const keyDown:any = {};
         const observer = scene.onKeyboardObservable.add((kbInfo) => {
+          
             const key = kbInfo.event.key;
             const keyMapped = this._controlsMap[key];
 
@@ -115,11 +156,18 @@ class GameInputManager {
                 return;
             }
 
-            if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
-                this.inputMap[key] = kbInfo.event;
+            const data = {
+              type: kbInfo.type,
+              key: kbInfo.event.key,
+              shift: kbInfo.event.shiftKey
             }
-            else {
-                delete this.inputMap[key];
+
+            if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+              this.inputMap[key] = data;
+            }
+            else if(kbInfo.type === KeyboardEventTypes.KEYUP){
+              delete this.inputMap[key];
+              this.inputDoneMap[key] = data;
             }
         });
 
