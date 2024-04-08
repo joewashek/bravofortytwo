@@ -1,4 +1,4 @@
-import { Engine, KeyboardEventTypes, Logger, PointerEventTypes, Scene, SceneComponentConstants } from "@babylonjs/core";
+import { Engine, KeyboardEventTypes, PointerEventTypes, Scene } from "@babylonjs/core";
 import {Observable} from "@babylonjs/core/Misc/observable";
 import logger from "./logger";
 
@@ -145,7 +145,7 @@ class GameInputManager {
     }
 
     enableKeyboard(scene:Scene) {
-      const keyDown:any = {};
+      
         const observer = scene.onKeyboardObservable.add((kbInfo) => {
           
             const key = kbInfo.event.key;

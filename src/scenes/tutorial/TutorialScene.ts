@@ -1,4 +1,4 @@
-import { ArcRotateCamera,HavokPlugin, Color3, Color4, Engine,HemisphericLight,Mesh,MeshBuilder,Observable,Scene, SceneLoader, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, Quaternion, AssetContainer, ISceneLoaderProgressEvent, AnimationGroup, KeyboardInfo } from "@babylonjs/core";
+import { ArcRotateCamera,HavokPlugin, Color3, Color4, Engine,HemisphericLight,MeshBuilder,Observable,Scene, SceneLoader, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, AssetContainer, ISceneLoaderProgressEvent, AnimationGroup, KeyboardInfo } from "@babylonjs/core";
 import GameInputManager from "../../infrastructure/GameInputManager";
 import IGameScene from "../../common/interfaces/IGameScene";
 import "@babylonjs/loaders/glTF";
@@ -41,6 +41,7 @@ export default class TutorialScene implements IGameScene{
   private charDropHeight = 14; //y pos where character enters scene, should be higher than max ground height
   private gunAnimations: AnimationGroup[] = [];
   private _inputMap = {};
+  private _groundAggregate: PhysicsAggregate;
 
   constructor(
     private _engine: Engine,
@@ -50,7 +51,6 @@ export default class TutorialScene implements IGameScene{
     this._onStateChangeObservable.add((s:any) => console.log(`${s.currentState} is new state. Prev was ${s.priorState}`));
     const scene = new Scene(this._engine);
     scene.useRightHandedSystem = true;
-    const canvas = this._engine.getRenderingCanvas();
     
     //sound manager
     scene.clearColor = new Color4(0.75,0.75,0.75,1);
@@ -132,7 +132,7 @@ export default class TutorialScene implements IGameScene{
       maxHeight: 35,
       subdivisions: 30,
       onReady: (mesh, heightBuffer) => {
-        const groundAggregate = new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0 });
+        this._groundAggregate = new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0 });
         this.loadPlayer();
       },
     });
@@ -197,7 +197,7 @@ export default class TutorialScene implements IGameScene{
   private fireWeapon(){
     //scene.animationGroups[0].start(false, 1.0, .035, 0.4);
     this.gunAnimations[1].start(false,1,220,246);
-    const test = this.gunAnimations[1].onAnimationGroupEndObservable.add(()=>{
+    this.gunAnimations[1].onAnimationGroupEndObservable.add(()=>{
       console.log('gun anim done.')
     })
   }

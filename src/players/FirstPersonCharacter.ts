@@ -216,7 +216,7 @@ class FirstPersonCharacter{
                 //this._climbingSteps=true;
                 //is av trying to go up steps
                 if (this._stepOffset > 0) {
-                    if (this._vMoveTot == 0) {
+                    if (this._vMoveTot === 0) {
                         //if just started climbing note down the position
                         this._vMovStartPos.copyFrom(this._characterStartPosition);
                     }
