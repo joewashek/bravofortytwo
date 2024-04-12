@@ -1,13 +1,14 @@
-import { ArcRotateCamera,HavokPlugin, Color3, Color4, Engine,HemisphericLight,MeshBuilder,Observable,Scene, SceneLoader, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, AssetContainer, ISceneLoaderProgressEvent, AnimationGroup, KeyboardInfo } from "@babylonjs/core";
-import GameInputManager from "../../infrastructure/GameInputManager";
+import { ArcRotateCamera,HavokPlugin, Color3, Color4, Engine,HemisphericLight,MeshBuilder,Observable,Scene, SceneLoader, Texture, Vector3, PhysicsAggregate, PhysicsShapeType, AbstractMesh, AssetContainer, ISceneLoaderProgressEvent, AnimationGroup, KeyboardInfo, StandardMaterial, CubeTexture } from "@babylonjs/core";
+import GameInputManager, { KeyData } from "../../infrastructure/GameInputManager";
 import IGameScene from "../../common/interfaces/IGameScene";
 import "@babylonjs/loaders/glTF";
-//import { ThirdPersonController } from "../../players/ThirdPersonController";
 import HavokPhysics from '@babylonjs/havok';
 import { TerrainMaterial } from "@babylonjs/materials/terrain";
 import GameInputProcessor from "../../infrastructure/GameInputProcessor";
 import GameSoundManager from "../../infrastructure/GameSoundManager";
 import FirstPersonCharacter, { CharacterDirection } from "../../players/FirstPersonCharacter";
+import { defaultSkybox } from "../../common/models/environment/standard-env-models";
+import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 
 const actionList = [
   {action: "RELOAD", shouldBounce: () => false },
@@ -15,6 +16,7 @@ const actionList = [
   {action: "MOVE_BACK", shouldBounce: () => false },
   {action: "MOVE_RIGHT", shouldBounce: () => false },
   {action: "MOVE_LEFT", shouldBounce: () => false },
+  {action: "SHIFT_DOWN", shouldBounce: () => false },
 ]
 
 const TUTORIAL_STATE = Object.freeze({
@@ -35,13 +37,15 @@ export default class TutorialScene implements IGameScene{
   private _state: number = TUTORIAL_STATE.CREATED;
   private _previousState: number = TUTORIAL_STATE.CREATED;
   private _gameState: number;
-  private _playerMesh?: AbstractMesh;
-  //private _characterController: ThirdPersonController;
+  //private _playerMesh?: AbstractMesh;
   private _localPlayer: FirstPersonCharacter;
   private charDropHeight = 14; //y pos where character enters scene, should be higher than max ground height
   private gunAnimations: AnimationGroup[] = [];
   private _inputMap = {};
   private _groundAggregate: PhysicsAggregate;
+
+  // UI
+  private _positionBox = new TextBlock("positionBox","");
 
   constructor(
     private _engine: Engine,
@@ -67,7 +71,8 @@ export default class TutorialScene implements IGameScene{
     HavokPhysics()
     .then(havokInstance => {
       this._scene.enablePhysics(new Vector3(0, earthGravity , 0), new HavokPlugin(true,havokInstance))
-      this.setupEnvironment();
+      this.setupTestEnv();
+      this.setupUI();
     });
    
     this._scene = scene;
@@ -92,57 +97,50 @@ export default class TutorialScene implements IGameScene{
       this._onStateChangeObservable.notifyObservers({priorState: this._previousState,currentState: value});
     }
   }
-
-  private async setupEnvironment(){
+  private setupUI(){
+    const gui = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    
+    //const positionBox = new TextBlock("positionBox","init");
+    this._positionBox.fontSize = "18pt";
+    this._positionBox.color = "white";
+    this._positionBox.width = 0.20;
+    this._positionBox.outlineColor = "red";
+    this._positionBox.top = "-45%";
+    //positionBox.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    gui.addControl(this._positionBox);
+    // this._scene.onAfterRenderObservable.add(()=>{
+    //   positionBox.text = `X: ${this._playerMesh?.position?.x ?? 0} - Y: ${this._playerMesh?.position?.y ?? 0} - Z: ${this._playerMesh?.position?.z ?? 0}`
+    // })
+    
+  }
+  private async setupTestEnv(){
+    //Skybox
+    defaultSkybox(this._scene,800)
 
     var light1 = new HemisphericLight("light1", new Vector3(1, 0.5, 0), this._scene);
 	  light1.intensity = 0.7;
-	  var light2 = new HemisphericLight("light2", new Vector3(-1, -0.5, 0), this._scene);
-	  light2.intensity = 0.2;
+	 
     
-    var terrainMaterial = new TerrainMaterial("terrainMaterial",this._scene);
-    terrainMaterial.specularColor = new Color3(0.5, 0.5, 0.5);
-    //terrainMaterial.specularColor = new Color3(0, 0, 0);
-    terrainMaterial.specularPower = 64;
-    
-    // Set the mix texture (represents the RGB values)
-    terrainMaterial.mixTexture = new Texture(process.env.PUBLIC_URL+"/textures/mixMap_test.png",this._scene);
+   // Ground
+   var groundMaterial = new StandardMaterial("ground", this._scene);
+   groundMaterial.diffuseTexture = new Texture(process.env.PUBLIC_URL+"/textures/tutorial4texture.jpg", this._scene);
 
-    // Diffuse textures following the RGB values of the mix map
-    // diffuseTexture1: Red
-    // diffuseTexture2: Green
-    // diffuseTexture3: Blue
-    terrainMaterial.diffuseTexture1 = new Texture(process.env.PUBLIC_URL+"/textures/floor.png",this._scene);
-    terrainMaterial.diffuseTexture2 = new Texture(process.env.PUBLIC_URL+"/textures/rock.png",this._scene);
-    terrainMaterial.diffuseTexture3 = new Texture(process.env.PUBLIC_URL+"/textures/grass.png",this._scene);
-    
-    // Bump textures according to the previously set diffuse textures
-    terrainMaterial.bumpTexture1 = new Texture(process.env.PUBLIC_URL+"/textures/floor_bump.png",this._scene);
-    terrainMaterial.bumpTexture2 = new Texture(process.env.PUBLIC_URL+"/textures/rockn.png",this._scene);
-    terrainMaterial.bumpTexture3 = new Texture(process.env.PUBLIC_URL+"/textures/grassn.png",this._scene);
-
-    // Rescale textures according to the terrain
-    terrainMaterial.diffuseTexture1.uScale = terrainMaterial.diffuseTexture1.vScale = 10;
-    terrainMaterial.diffuseTexture2.uScale = terrainMaterial.diffuseTexture2.vScale = 10;
-    terrainMaterial.diffuseTexture3.uScale = terrainMaterial.diffuseTexture3.vScale = 10;
-
-    const groundMesh = MeshBuilder.CreateGroundFromHeightMap("groundMesh",`${process.env.PUBLIC_URL}/textures/height_map1.png`,{
-      height:250,
-      width: 250,
-      maxHeight: 35,
-      subdivisions: 30,
+    const groundMesh = MeshBuilder.CreateGroundFromHeightMap("groundMesh",`${process.env.PUBLIC_URL}/textures/tutorial4terrain.png`,{
+      height:500,
+      width: 500,
+      maxHeight: 100,
+      subdivisions: 200,
       onReady: (mesh, heightBuffer) => {
         this._groundAggregate = new PhysicsAggregate(mesh, PhysicsShapeType.MESH, { mass: 0 });
         this.loadPlayer();
       },
     });
-    //groundMesh.position = new Vector3(0, 0, 0)
+    
     groundMesh.position.y = -10;
     groundMesh.checkCollisions = true;
     groundMesh.isPickable = false;
     groundMesh.receiveShadows = true;
-    groundMesh.material = terrainMaterial;
-
+    groundMesh.material = groundMaterial;
   }
 
   get scene(): Scene{
@@ -153,6 +151,7 @@ export default class TutorialScene implements IGameScene{
     const dT = deltaTime ?? (this.scene.getEngine().getDeltaTime() / 1000);
     this._actionProcessor?.update();
     this._localPlayer?.update(dT);
+    this.updateUI();
 
     switch (this.gameState) {
       case TUTORIAL_STATE.CREATED:
@@ -164,9 +163,15 @@ export default class TutorialScene implements IGameScene{
     }
   };
 
+  private updateUI(){
+    if(this._localPlayer){
+      this._positionBox.text = `X: ${this._localPlayer.PlayerMesh.position.x.toFixed(2)} - Y: ${this._localPlayer.PlayerMesh.position.y.toFixed(2)} - Z: ${this._localPlayer?.PlayerMesh.position.z.toFixed(2)}`
+    }
+  }
+
   public async loadPlayer(){
     
-    this._localPlayer = new FirstPersonCharacter(this._scene,this._camera,new Vector3(10,15,10));
+    this._localPlayer = new FirstPersonCharacter(this._scene,this._camera,new Vector3(150,55,-150),{maxPosX:245,maxPosZ:245});
     this.loadPistol();
 
   }
@@ -246,7 +251,7 @@ export default class TutorialScene implements IGameScene{
     console.log(data)
   }
 
-  private MOVE_FORWARD(state:any,data:KeyboardInfo){
+  private MOVE_FORWARD(state:any,data:KeyData){
     
     if(data){
       const isMovingForward = data.type === 1;
@@ -256,7 +261,7 @@ export default class TutorialScene implements IGameScene{
     
   }
 
-  private MOVE_BACK(state:any,data:KeyboardInfo){
+  private MOVE_BACK(state:any,data:KeyData){
     
     if(data){
       const isMovingBack = data.type === 1;
@@ -266,7 +271,7 @@ export default class TutorialScene implements IGameScene{
     
   }
 
-  private MOVE_LEFT(state:any,data:KeyboardInfo){
+  private MOVE_LEFT(state:any,data:KeyData){
     
     if(data){
       const isMovingLeft = data.type === 1;
@@ -276,7 +281,7 @@ export default class TutorialScene implements IGameScene{
     
   }
 
-  private MOVE_RIGHT(state:any,data:KeyboardInfo){
+  private MOVE_RIGHT(state:any,data:KeyData){
     
     if(data){
       const isMovingRight = data.type === 1;
@@ -285,4 +290,15 @@ export default class TutorialScene implements IGameScene{
     return "moving right"
     
   }
+
+  private SHIFT_DOWN(state:any,data:KeyData){
+    
+    if(data){
+      const isShiftDown = data.type === 1;
+      this._localPlayer.sprint(isShiftDown)
+    }
+    return "shift down"
+    
+  }
+
 }

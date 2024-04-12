@@ -2,9 +2,11 @@ import { Engine, KeyboardEventTypes, PointerEventTypes, Scene } from "@babylonjs
 import {Observable} from "@babylonjs/core/Misc/observable";
 import logger from "./logger";
 
-import InputControls from "./input-action-maps";
-
-const defaultControlsMap = InputControls.inputControlsMap;
+export type KeyData = {
+  type: number,
+  key: string,
+  shiftDown: boolean
+}
 
 class GameInputManager {
 
@@ -53,11 +55,12 @@ class GameInputManager {
     }
     constructor(
       private _engine:Engine,
-      private _controlsMap: { [key:string]: string} = defaultControlsMap
+      private _controlsMap: { [key:string]: string}
       ) {
         this._onInputAvailable = new Observable();
         this._onInputDoneAvailable = new Observable();
     }
+    
 
     registerInputForScene(sceneToRegister:Scene) {
         logger.logInfo("registering input for scene", sceneToRegister);
@@ -148,28 +151,29 @@ class GameInputManager {
       
         const observer = scene.onKeyboardObservable.add((kbInfo) => {
           
-            const key = kbInfo.event.key;
-            const keyMapped = this._controlsMap[key];
+          const key = kbInfo.event.key;
+          const keyMapped = this._controlsMap[key];
+          
+          if (!keyMapped) {
+            console.log("Unmapped key processed by app", key);
+            return;
+          }
 
-            if (!keyMapped) {
-              console.log("Unmapped key processed by app", key);
-                return;
-            }
+          const data: KeyData = {
+            type: kbInfo.type,
+            key: kbInfo.event.key,
+            shiftDown: kbInfo.event.shiftKey
+          }
+          
 
-            const data = {
-              type: kbInfo.type,
-              key: kbInfo.event.key,
-              shift: kbInfo.event.shiftKey
-            }
-
-            if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
-              this.inputMap[key] = data;
-            }
-            else if(kbInfo.type === KeyboardEventTypes.KEYUP){
-              delete this.inputMap[key];
-              this.inputDoneMap[key] = data;
-            }
-        });
+          if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+            this.inputMap[key] = data;
+          }
+          else if(kbInfo.type === KeyboardEventTypes.KEYUP){
+            delete this.inputMap[key];
+            this.inputDoneMap[key] = data;
+          }
+      });
 
         const checkInputs = () => { };
         return {

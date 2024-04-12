@@ -7,7 +7,6 @@ import { PhysicsImpostor } from '@babylonjs/core/Physics/physicsImpostor';
 import { AssetContainer, GroundMesh, HavokPlugin,PhysicsAggregate,PhysicsShapeType,SceneLoader,Texture, TransformNode,ArcRotateCamera } from '@babylonjs/core';
 import HavokPhysics, { HavokPhysicsWithBindings, Result } from '@babylonjs/havok';
 import { Engine, Scene, SceneEventArgs, useScene } from 'react-babylonjs';
-import PlayerCamera from '../players/player_camera';
 import { Color3 } from '@babylonjs/core';
 import { TerrainMaterial } from '@babylonjs/materials';
 

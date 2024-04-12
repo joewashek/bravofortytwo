@@ -9,6 +9,7 @@ import GameInputManager from '../infrastructure/GameInputManager';
 import IGameScene from '../common/interfaces/IGameScene';
 import TutorialScene from '../scenes/tutorial/TutorialScene';
 import characterControls from '../players/characterControlsMap';
+import InputActionsMap from '../infrastructure/input-action-maps';
 
 class Application{
 
@@ -75,7 +76,7 @@ class Application{
     this._engine.displayLoadingUI();
 
     this.moveNextAppState(AppStates.INITIALIZING);
-    this._inputManager = new GameInputManager(this._engine);
+    this._inputManager = new GameInputManager(this._engine,InputActionsMap.inputControlsMap);
 
     this._splashScreen = new SplashScene(this._engine,this._inputManager);
 

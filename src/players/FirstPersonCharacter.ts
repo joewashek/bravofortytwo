@@ -1,4 +1,9 @@
-import { ArcRotateCamera, Mesh, MeshBuilder, PhysicsAggregate, Scene, Vector3 } from "@babylonjs/core";
+import { ArcRotateCamera, Mesh, MeshBuilder, Scene, Vector3 } from "@babylonjs/core";
+
+export type CharacterOptions = {
+  maxPosX: number,
+  maxPosZ: number
+}
 
 export enum CharacterDirection{
   FORWARD = "forward",
@@ -23,41 +28,34 @@ interface Command {
 class FirstPersonCharacter{
 
   private _playerMesh:Mesh;
-  private _cameraTargetMesh:Mesh;
-  private _prevFrameTime: number;
-  private _direction: Vector3 = new Vector3();
   private _velocity: Vector3 = new Vector3();
-  private _onObject: boolean = false;
-  private _walkSpeedRatio: number = 300;
-  private _sprintSpeedRatio: number = 100;
-  private _physicsAggregate: PhysicsAggregate;
+  private _onObject: boolean;
   // velocity determined by inpout arrow keys pressed. It's more a local direction vector than a velocity.
   private _characterStartPosition: Vector3 = new Vector3(0,0,0);
   private _inFreeFall: boolean = false;
   //distance by which AV would move down if in freefall
   private _freeFallDist: number = 0;
-   //how many minimum contiguos frames should the AV have been in free fall
-    //before we assume AV is in big freefall.
-    //we will use this to remove animation flicker during move down a slope (fall, move, fall move etc)
-    //TODO: base this on slope - large slope large count
-    private _fallFrameCountMin: number = 50;
-    private _fallFrameCount: number = 0;
+  //how many minimum contiguos frames should the AV have been in free fall
+  //before we assume AV is in big freefall.
+  //we will use this to remove animation flicker during move down a slope (fall, move, fall move etc)
+  //TODO: base this on slope - large slope large count
+  private _fallFrameCountMin: number = 50;
+  private _fallFrameCount: number = 0;
   //for how long has the av been falling while moving
   private _movFallTime: number = 0;
   private _gravity: number = 9.8;
 
-  private _wasWalking: boolean = false;
-  private _wasRunning: boolean = false;
   private _moveVector: Vector3;
   private _ffSign: number = 1; //this._av2cam = b ? Math.PI / 2 : 3 * Math.PI / 2;
   private _av2cam: number = 0;
 
-  private _walkSpeed: number = 3;
-  private _runSpeed: number = this._walkSpeed * 2;
-  private _backSpeed: number = this._walkSpeed / 2;
-  private _jumpSpeed: number = this._walkSpeed * 2;
-  private _leftSpeed: number = this._walkSpeed / 2;
-  private _rightSpeed: number = this._walkSpeed / 2;
+  private _isSprinting: boolean = false;
+  private _runSpeed: number = 10;
+  private _sprintSpeed: number = this._runSpeed * 2;
+  private _backSpeed: number = this._runSpeed / 2;
+  private _jumpSpeed: number = this._runSpeed * 2;
+  private _leftSpeed: number = this._runSpeed / 2;
+  private _rightSpeed: number = this._runSpeed / 2;
 
   //slopeLimit in degrees
   private _minSlopeLimit: number = 30;
@@ -72,6 +70,10 @@ class FirstPersonCharacter{
   private _vMoveTot: number = 0;
   //position of av when it started moving up
   private _vMovStartPos: Vector3 = Vector3.Zero();
+
+  // map restrictions
+  private _maxPosX: number = 0;
+  private _maxPosZ: number = 0;
 
   private _command: Command = {
       frameTime: 0,
@@ -89,12 +91,17 @@ class FirstPersonCharacter{
   constructor(
     private _scene:Scene,
     private _camera:ArcRotateCamera,
-    private _initialLocation:Vector3){
+    private _initialLocation:Vector3,
+    private _options?:CharacterOptions){
       this._camera.angularSensibilityX = 500;
       this._camera.angularSensibilityY = 500;
       this._camera.inertia = 0;
       this._camera.minZ = 0.05;
-      this.setupPlayerMesh()
+      this.setupPlayerMesh();
+      if(_options){
+        this._maxPosX = _options.maxPosX;
+        this._maxPosZ = _options.maxPosZ;
+      }
   }
 
   private setupPlayerMesh(){
@@ -118,6 +125,10 @@ class FirstPersonCharacter{
   private jump(){
       this._velocity.y = 0.15;
       this._onObject = false;
+  }
+
+  public get PlayerMesh(){
+    return this._playerMesh;
   }
 
   public update(delta:number){
@@ -146,6 +157,10 @@ class FirstPersonCharacter{
     this._command.moveRightKeyDown = direction === CharacterDirection.RIGHT && isMoving; 
   }
 
+  public sprint(isSprinting:boolean){
+    this._isSprinting = isSprinting;
+  }
+
   private move(delta:number){
     this._characterStartPosition.copyFrom(this._playerMesh.position);
 
@@ -160,33 +175,22 @@ class FirstPersonCharacter{
     this._movFallTime = this._movFallTime + dt;
 
     let moving: boolean = false;
-
+    //console.log('starting move function: '+ moving)
     if(this._inFreeFall){
       this._moveVector.y = -this._freeFallDist;
       moving = true;
     }
     else{
-      this._wasWalking = false;
-      this._wasRunning = false;
+      
       this._av2cam =  Math.PI / 2;
       this._playerMesh.rotation.y = this._av2cam - this._camera.alpha;
 
       let sign: number;
       if(this._command.moveForwardKeyDown){
-        console.log('moving forward')
         let forwardDist: number = 0;
-        // TODO: Sprinting Logic
-        // if (this._act._walkMod) {
-        //     this._wasRunning = true;
-        //     forwardDist = this._runSpeed * dt;
-        //     anim = this._run;
-        // } else {
-        //     this._wasWalking = true;
-        //     forwardDist = this._walkSpeed * dt;
-        //     anim = this._walk;
-        // }
 
-        forwardDist = this._runSpeed * dt;
+        forwardDist = this._isSprinting ? this._sprintSpeed * dt : this._runSpeed * dt;
+
         this._moveVector = this._playerMesh.calcMovePOV(0, -this._freeFallDist, this._ffSign * forwardDist);
         moving = true;
       }else if(this._command.moveBackwardKeyDown){
@@ -207,7 +211,24 @@ class FirstPersonCharacter{
 
     if(moving){
       if (this._moveVector.length() > 0.001) {
-        this._playerMesh.moveWithCollisions(this._moveVector);
+
+        if(this._playerMesh.position.x === this._maxPosX || this._playerMesh.position.x === -this._maxPosX){
+          console.log('max z reached')
+          return;
+        }
+        if(this._playerMesh.position.z === this._maxPosZ || this._playerMesh.position.z === -this._maxPosZ){
+          console.log('max x reached')
+          return;
+        }
+        
+        const moveDirectionLimited = new Vector3(
+          ((this._playerMesh.position.x > this._maxPosX && this._moveVector.x > 0) || (this._playerMesh.position.x < -(this._maxPosX) && this._moveVector.x < 0))? 0 : this._moveVector.x,
+          this._moveVector.y,
+          ((this._playerMesh.position.z > this._maxPosZ && this._moveVector.z > 0) || (this._playerMesh.position.z < -(this._maxPosZ) && this._moveVector.z < 0))? 0 : this._moveVector.z,
+      );
+
+        //console.log('yes moving')
+        this._playerMesh.moveWithCollisions(moveDirectionLimited);
         //walking up a slope
         if (this._playerMesh.position.y > this._characterStartPosition.y) {
             const actDisp: Vector3 = this._playerMesh.position.subtract(this._characterStartPosition);
@@ -263,7 +284,11 @@ class FirstPersonCharacter{
         } else {
             this._endFreeFall();
         }
+      }else{
+        //console.log('not moving enough')
       }
+    }else{
+      //console.log('not moving')
     }
   }
 

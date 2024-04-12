@@ -5,7 +5,7 @@ import LoadingModal from './game/LoadingModal';
 const Game = lazy(()=> import('./game/Game'))
 
 function App() {
-
+  
   const [playClicked,setPlayClicked] = useState(false);
 
   return (
