@@ -1,7 +1,26 @@
-import { ArcRotateCamera, Color3, Color4, CreatePlane, Engine, HemisphericLight, Mesh, Observable, Scene, Sound, StandardMaterial, Texture, Vector3 } from "@babylonjs/core";
+import {
+  ArcRotateCamera,
+  Color3,
+  Color4,
+  CreatePlane,
+  Engine,
+  HemisphericLight,
+  Mesh,
+  Observable,
+  Scene,
+  Sound,
+  StandardMaterial,
+  Texture,
+  Vector3,
+} from "@babylonjs/core";
 import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
 import { TextBlock, TextWrapping } from "@babylonjs/gui/2D/controls/textBlock";
-import { animationFps, fadeAnimation, flipAnimation, scaleAnimation } from "../common/models/animation-types";
+import {
+  animationFps,
+  fadeAnimation,
+  flipAnimation,
+  scaleAnimation,
+} from "../common/models/animation-types";
 import CutSceneSegment from "../common/models/CutSceneSegment";
 import logger from "../infrastructure/logger";
 import poweredByUrl from "../assets/powered-by.png";
@@ -13,10 +32,9 @@ import IGameScene from "../common/interfaces/IGameScene";
 import GameSoundManager from "../infrastructure/GameSoundManager";
 import { SoundId } from "../infrastructure/GameSoundMap";
 
-const actionList = [{action: "ACTIVATE", shouldBounce: () => true }]
+const actionList = [{ action: "ACTIVATE", shouldBounce: () => true }];
 
-export default class SplashScene implements IGameScene{
-
+export default class SplashScene implements IGameScene {
   private _skipRequested: boolean;
   private _onReadyObservable: Observable<unknown>;
   private _scene: Scene;
@@ -32,19 +50,34 @@ export default class SplashScene implements IGameScene{
   private _actionProcessor: GameInputProcessor;
   private _audioManager: GameSoundManager;
 
-  constructor(private _engine:Engine, inputManager:any){
+  constructor(private _engine: Engine, inputManager: any) {
     this._skipRequested = false;
     this._onReadyObservable = new Observable();
     this._scene = new Scene(this._engine);
     this._scene.clearColor = Color4.FromColor3(Color3.Black());
-    this._camera = new ArcRotateCamera("camera", 0, Math.PI / 2, 5, Vector3.Zero(), this._scene);
-    this._light = new HemisphericLight("light", new Vector3(0, 1, 0), this._scene);
+    this._camera = new ArcRotateCamera(
+      "camera",
+      0,
+      Math.PI / 2,
+      5,
+      Vector3.Zero(),
+      this._scene
+    );
+    this._light = new HemisphericLight(
+      "light",
+      new Vector3(0, 1, 0),
+      this._scene
+    );
     this._light.groundColor = Color3.White();
     this._light.intensity = 0.5;
-    this._billboard = CreatePlane("billboard", {
+    this._billboard = CreatePlane(
+      "billboard",
+      {
         width: 5,
-        height: 3
-    }, this._scene);
+        height: 3,
+      },
+      this._scene
+    );
     this._billboard.rotation.z = Math.PI;
     this._billboard.rotation.x = Math.PI;
     this._billboard.rotation.y = Math.PI / 2;
@@ -58,12 +91,18 @@ export default class SplashScene implements IGameScene{
     const communityTexture = new Texture(communityUrl, this._scene);
     const rigTexture = new Texture(spaceTruckerRigUrl, this._scene);
 
-    this._callToActionTexture = AdvancedDynamicTexture.CreateFullscreenUI("splashGui");
-    let ctaBlock = new TextBlock("ctaBlock", "Press any key or tap the screen to continue...");
-    ctaBlock.textWrapping = TextWrapping.WordWrap;
+    this._callToActionTexture =
+      AdvancedDynamicTexture.CreateFullscreenUI("splashGui");
+    let ctaBlock = new TextBlock(
+      "ctaBlock",
+      "Press any key or tap the screen to continue..."
+    );
+    //ctaBlock.textWrapping = TextWrapping.WordWrap;
+    ctaBlock.textWrapping = 1;
     ctaBlock.color = "white";
     ctaBlock.fontSize = "18pt";
-    ctaBlock.verticalAlignment = ctaBlock.textVerticalAlignment = TextBlock.VERTICAL_ALIGNMENT_BOTTOM;
+    ctaBlock.verticalAlignment = ctaBlock.textVerticalAlignment =
+      TextBlock.VERTICAL_ALIGNMENT_BOTTOM;
     ctaBlock.paddingBottom = "12%";
     ctaBlock.isVisible = false;
     this._callToActionTexture.addControl(ctaBlock);
@@ -74,98 +113,104 @@ export default class SplashScene implements IGameScene{
     this._callToAction = this.buildcallToActionAnimation();
 
     this._poweredBy.onEnd.addOnce(() => {
-        billMat.diffuseTexture = babylonTexture;
-        this._billboard.rotation.x = Math.PI;
-        this._light.intensity = 0.667;
-        this._billboard.visibility = 0;
-        this._currentSegment = this._babylonBillboard;
+      billMat.diffuseTexture = babylonTexture;
+      this._billboard.rotation.x = Math.PI;
+      this._light.intensity = 0.667;
+      this._billboard.visibility = 0;
+      this._currentSegment = this._babylonBillboard;
     });
 
     this._babylonBillboard.onEnd.addOnce(() => {
-        billMat.diffuseTexture = communityTexture;
-        this._billboard.rotation.x = Math.PI;
-        this._billboard.visibility = 0;
-        this._currentSegment = this._communityProduction;
+      billMat.diffuseTexture = communityTexture;
+      this._billboard.rotation.x = Math.PI;
+      this._billboard.visibility = 0;
+      this._currentSegment = this._communityProduction;
     });
 
     this._communityProduction.onEnd.addOnce(() => {
-        this._billboard.visibility = 0;
-        this._currentSegment = this._callToAction;
-        billMat.diffuseTexture = rigTexture;
+      this._billboard.visibility = 0;
+      this._currentSegment = this._callToAction;
+      billMat.diffuseTexture = rigTexture;
     });
 
     this._callToAction.onEnd.addOnce(() => {
-        ctaBlock.isVisible = true;
+      ctaBlock.isVisible = true;
     });
 
-    this._actionProcessor = new GameInputProcessor(this, inputManager, actionList);
+    this._actionProcessor = new GameInputProcessor(
+      this,
+      inputManager,
+      actionList
+    );
 
-    this._audioManager = new GameSoundManager(this._scene,SoundId.TITLE);
-    this._audioManager.onReadyObservable.addOnce(_ => this.onReadyObservable.notifyObservers(null));
+    this._audioManager = new GameSoundManager(this._scene, SoundId.TITLE);
+    this._audioManager.onReadyObservable.addOnce((_) =>
+      this.onReadyObservable.notifyObservers(null)
+    );
   }
 
-  get music(){
+  get music() {
     return this._audioManager.sound(SoundId.TITLE);
   }
 
-  get scene(){
+  get scene() {
     return this._scene;
   }
 
-  attachControls(){
+  attachControls() {
     this._actionProcessor.attachControl();
   }
 
-  detachControls(){
+  detachControls() {
     this._actionProcessor.detachControl();
   }
 
-  get onReadyObservable(){
+  get onReadyObservable() {
     return this._onReadyObservable;
   }
 
-  get skipRequested(){
+  get skipRequested() {
     return this._skipRequested;
   }
 
   run() {
-    logger.logInfo("Running splash scene")
+    logger.logInfo("Running splash scene");
     this._currentSegment = this._poweredBy;
     this.music.play();
     this.music.setVolume(0.998, 400);
     this._currentSegment.start();
     // this.scene.onBeforeRenderObservable.add(() => {
-        
+
     // });
   }
 
   update() {
-    let prior, curr = this._currentSegment;
+    let prior,
+      curr = this._currentSegment;
     this._actionProcessor?.update();
     if (this._skipRequested) {
-        this?._currentSegment?.stop();
-        this._currentSegment = null;
-        return;
+      this?._currentSegment?.stop();
+      this._currentSegment = null;
+      return;
     }
     curr = this._currentSegment;
     if (prior !== curr) {
-        this._currentSegment?.start();
+      this._currentSegment?.start();
     }
   }
 
-  ACTIVATE(state:any):boolean {
+  ACTIVATE(state: any): boolean {
     const lastState = state.priorState;
     if (!this._skipRequested && !lastState) {
-        logger.logInfo("Key press detected. Skipping cut scene.");
-        this._skipRequested = true;
-        this.music?.stop();
-        return true;
+      logger.logInfo("Key press detected. Skipping cut scene.");
+      this._skipRequested = true;
+      this.music?.stop();
+      return true;
     }
     return false;
   }
 
   private buildcallToActionAnimation() {
-
     const start = 0;
     const enterTime = 3.0;
     const exitTime = enterTime + 2.5;
@@ -174,24 +219,27 @@ export default class SplashScene implements IGameScene{
     const beginExitFrame = exitTime * animationFps;
     const endFrame = end * animationFps;
     const keys = [
-        { frame: start, value: 0 },
-        { frame: entranceFrame, value: 1 },
-        { frame: beginExitFrame, value: 0.998 },
-        { frame: endFrame, value: 1 }
+      { frame: start, value: 0 },
+      { frame: entranceFrame, value: 1 },
+      { frame: beginExitFrame, value: 0.998 },
+      { frame: endFrame, value: 1 },
     ];
 
     const startVector = new Vector3(1, 1, 1);
     const scaleKeys = [
-        { frame: start, value: startVector },
-        { frame: entranceFrame, value: new Vector3(1.25, 1, 1.25) },
-        { frame: beginExitFrame, value: new Vector3(1.5, 1, 1.5) },
-        { frame: endFrame, value: new Vector3(1, 1, 1) }
+      { frame: start, value: startVector },
+      { frame: entranceFrame, value: new Vector3(1.25, 1, 1.25) },
+      { frame: beginExitFrame, value: new Vector3(1.5, 1, 1.5) },
+      { frame: endFrame, value: new Vector3(1, 1, 1) },
     ];
 
     fadeAnimation.setKeys(keys);
     scaleAnimation.setKeys(scaleKeys);
 
-    const seg = new CutSceneSegment(this._billboard, this._scene, [fadeAnimation, scaleAnimation]);
+    const seg = new CutSceneSegment(this._billboard, this._scene, [
+      fadeAnimation,
+      scaleAnimation,
+    ]);
     return seg;
   }
 
@@ -204,17 +252,19 @@ export default class SplashScene implements IGameScene{
     const beginExitFrame = exitTime * animationFps;
     const endFrame = end * animationFps;
     const keys = [
-        { frame: start, value: 0 },
-        { frame: entranceFrame, value: 1 },
-        { frame: beginExitFrame, value: 0.998 },
-        { frame: endFrame, value: 0 }
+      { frame: start, value: 0 },
+      { frame: entranceFrame, value: 1 },
+      { frame: beginExitFrame, value: 0.998 },
+      { frame: endFrame, value: 0 },
     ];
 
     fadeAnimation.setKeys(keys);
 
-    const seg2 = new CutSceneSegment(this._billboard, this._scene,[fadeAnimation]);
+    const seg2 = new CutSceneSegment(this._billboard, this._scene, [
+      fadeAnimation,
+    ]);
     return seg2;
-}
+  }
 
   private buildBabylonAnimations() {
     const start = 0;
@@ -225,18 +275,20 @@ export default class SplashScene implements IGameScene{
     const beginExitFrame = exitTime * animationFps;
     const endFrame = end * animationFps;
     const keys = [
-        { frame: start, value: 0 },
-        { frame: entranceFrame, value: 1 },
-        { frame: beginExitFrame, value: 0.998 },
-        { frame: endFrame, value: 0 }
+      { frame: start, value: 0 },
+      { frame: entranceFrame, value: 1 },
+      { frame: beginExitFrame, value: 0.998 },
+      { frame: endFrame, value: 0 },
     ];
     fadeAnimation.setKeys(keys);
 
-    const seg1 = new CutSceneSegment(this._billboard, this._scene, [fadeAnimation]);
+    const seg1 = new CutSceneSegment(this._billboard, this._scene, [
+      fadeAnimation,
+    ]);
     return seg1;
   }
 
-  private buildPoweredByAnimations(){
+  private buildPoweredByAnimations() {
     const start = 0;
     const enterTime = 3.5;
     const exitTime = enterTime + 2.5;
@@ -246,22 +298,25 @@ export default class SplashScene implements IGameScene{
     const beginExitFrame = exitTime * animationFps;
     const endFrame = end * animationFps;
     const keys = [
-        { frame: start, value: 0 },
-        { frame: entranceFrame, value: 1 },
-        { frame: beginExitFrame, value: 0.998 },
-        { frame: endFrame, value: 0 }
+      { frame: start, value: 0 },
+      { frame: entranceFrame, value: 1 },
+      { frame: beginExitFrame, value: 0.998 },
+      { frame: endFrame, value: 0 },
     ];
     fadeAnimation.setKeys(keys);
 
     const flipKeys = [
-        { frame: start, value: Math.PI },
-        { frame: entranceFrame, value: 0 },
-        { frame: beginExitFrame, value: Math.PI },
-        { frame: endFrame, value: 2 * Math.PI }
+      { frame: start, value: Math.PI },
+      { frame: entranceFrame, value: 0 },
+      { frame: beginExitFrame, value: Math.PI },
+      { frame: endFrame, value: 2 * Math.PI },
     ];
     flipAnimation.setKeys(flipKeys);
 
-    const seg0 = new CutSceneSegment(this._billboard, this._scene, [fadeAnimation, flipAnimation]);
+    const seg0 = new CutSceneSegment(this._billboard, this._scene, [
+      fadeAnimation,
+      flipAnimation,
+    ]);
     return seg0;
   }
 }
